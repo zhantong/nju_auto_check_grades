@@ -40,6 +40,15 @@ def get_verify_code(opener,url):
 	img.save('temp.png')
 	text=image_to_string('temp.png')
 	return text
+def get_verify_code_auto_try(opener,url):
+	try_count=10
+	code_length=4
+	while try_count:
+		code=get_verify_code(opener,url)
+		if len(code)==code_length:
+			return code
+		try_count-=1
+	return -1
 def login(opener):
 	params=urllib.parse.urlencode({
 		'goto':'http://pyb.nju.edu.cn/loginredirect.action',
@@ -50,11 +59,21 @@ def login(opener):
 		con=f.read().decode()
 		r=regular.findall(con)
 		r=dict(r)
-	code=get_verify_code(opener,'http://cer.nju.edu.cn/amserver/verify/image.jsp')
+	code=get_verify_code_auto_try(opener,'http://cer.nju.edu.cn/amserver/verify/image.jsp')
 	r['IDToken1'],r['IDToken2']=private.get_account_pwd()
 	r['inputCode']=code
 	with opener.open('http://cer.nju.edu.cn/amserver/UI/Login',data=urllib.parse.urlencode(r).encode()) as f:
-		print(f.read().decode())
+		content=f.read().decode()
+		if content.find('验证码错误')==-1:
+			return 0
+		return -1
+def login_auto_try(opener):
+	try_count=10
+	while try_count:
+		if login(opener)==0:
+			return 0
+		try_count-=1
+	return -1
 def get_score(opener):
 	reg_tr=re.compile(r'<tr.*?>\s*(.*?)\s*</tr>',re.S)
 	reg_td=re.compile(r'<td.*?>\s*(.*?)\s*</td>',re.S)
