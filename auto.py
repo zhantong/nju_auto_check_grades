@@ -50,19 +50,22 @@ def get_verify_code_auto_try(opener,url):
 		try_count-=1
 	return -1
 def login(opener):
-	params=urllib.parse.urlencode({
-		'goto':'http://pyb.nju.edu.cn/loginredirect.action',
-		'gotoOnFail':'http://pyb.nju.edu.cn/login.action'
-		})
-	url='http://cer.nju.edu.cn/amserver/UI/Login?%s'%params
+	with opener.open('http://pyb.nju.edu.cn/') as f:
+		content=f.read().decode()
+		login_url=re.findall(r'<form id="login_form".*?action="(.*?)"\s*>',content)[0]
+		login_form=regular.findall(content)
+		login_form=dict(login_form)
+	url='%s?%s'%(login_url,urllib.parse.urlencode(login_form))
 	with opener.open(url) as f:
 		con=f.read().decode()
+		verify_code_url=re.findall(r'<img id="vcodeimg" src="(.*?)"/>',con)[0]
+		verify_code_url=urllib.parse.urljoin(login_url,verify_code_url)
 		r=regular.findall(con)
 		r=dict(r)
-	code=get_verify_code_auto_try(opener,'http://cer.nju.edu.cn/amserver/verify/image.jsp')
+	code=get_verify_code_auto_try(opener,verify_code_url)
 	r['IDToken1'],r['IDToken2']=private.get_account_pwd()
 	r['inputCode']=code
-	with opener.open('http://cer.nju.edu.cn/amserver/UI/Login',data=urllib.parse.urlencode(r).encode()) as f:
+	with opener.open(login_url,data=urllib.parse.urlencode(r).encode()) as f:
 		content=f.read().decode()
 		if content.find('验证码错误')==-1:
 			return 0
