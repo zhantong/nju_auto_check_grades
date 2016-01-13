@@ -7,9 +7,10 @@ from urllib.parse import urlencode
 from urllib.parse import urljoin
 import re
 import private
-
+from email.mime.text import MIMEText
+import smtplib
 def image_to_string(img):
-	res=subprocess.Popen(['tesseract',img,'stdout','-l eng', '-psm 6'],shell=True,stdout=subprocess.PIPE).communicate()[0]  # 生成同名txt文件
+	res=subprocess.Popen(['tesseract',img,'stdout','-l eng', '-psm 6'],shell=False,stdout=subprocess.PIPE).communicate()[0]  # 生成同名txt文件
 	return res.decode().strip().replace(' ','')
 def get_verify_code(opener,url):
 	threshold=(100,100,100)
@@ -73,9 +74,27 @@ def get_score(opener):
 		r=reg_tr.findall(con)
 		for row in r:
 			score_table.append(reg_td.findall(row))
-	print(score_table)
+	text=''
+	for row in score_table:
+		for item in row:
+			text+=item+'\t'
+		text+='\n'
+	return text
+def send_mail(text):
+	msg=MIMEText(text)
+	msg['Subject']='新的成绩信息'
+	msg['From']='zhantong1994@163.com'
+	msg['To']='zhantong1994@163.com'
+	s=smtplib.SMTP(host='smtp.163.com')
+	s.ehlo()
+	s.starttls()
+	s.ehlo()
+	s.login(private.get_email_account(),private.get_email_password())
+	s.send_message(msg)
+	s.quit()
 if __name__=='__main__':
 	cj=http.cookiejar.CookieJar()
 	opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 	login_auto_try(opener)
-	get_score(opener)
+	text=get_score(opener)
+	send_mail(text)
