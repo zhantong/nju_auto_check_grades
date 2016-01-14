@@ -28,12 +28,7 @@ def deal_with_image(file_path,file_name):
 			else:
 				pix[x,y]=(0,0,0,255)
 	img.save(file_name)
-def send_mail(score_table):
-	text=''
-	for row in score_table:
-		for item in row:
-			text+=item+'\t'
-		text+='\n'
+def send_mail(text):
 	msg=MIMEText(text)
 	msg['Subject']='新的成绩信息'
 	msg['From']='zhantong1994@163.com'
@@ -105,7 +100,7 @@ class Test:
 			try_count-=1
 			logging.debug('login failed')
 		return -1
-	def get_score(self):
+	def get_score_raw(self):
 		reg_tr=re.compile(r'<tr.*?>\s*(.*?)\s*</tr>',re.S)
 		reg_td=re.compile(r'<td.*?>\s*(.*?)\s*</td>',re.S)
 		score_table=[]
@@ -115,10 +110,16 @@ class Test:
 			for row in r:
 				score_table.append(reg_td.findall(row))
 		return score_table
+	def get_score(self):
+		score_table=self.get_score_raw()
+		if len(score_table)!=2:
+			text=''
+			for row in score_table:
+				for item in row:
+					text+=item+'\t'
+				text+='\n'
+			send_mail(text)
 if __name__=='__main__':
 	t=Test()
 	t.login_auto_try()
-	score_table=t.get_score()
-	logging.info(score_table)
-	if len(score_table)!=2:
-		send_mail(score_table)
+	t.get_score()
