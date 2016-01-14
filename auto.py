@@ -9,6 +9,11 @@ import re
 import private
 from email.mime.text import MIMEText
 import smtplib
+import logging
+logging.basicConfig(level=logging.DEBUG,
+					format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+					datefmt='%a,%d %b %Y %H:%M:%S',
+					filename='app.log')
 def image_to_string(img):
 	res=subprocess.Popen(['tesseract',img,'stdout','-l eng', '-psm 6'],shell=False,stdout=subprocess.PIPE).communicate()[0]  # 生成同名txt文件
 	return res.decode().strip().replace(' ','')
@@ -32,9 +37,12 @@ def get_verify_code_auto_try(opener,url):
 	code_length=4
 	while try_count:
 		code=get_verify_code(opener,url)
+		logging.debug('verify code:%s'%code)
 		if len(code)==code_length:
+			logging.info('verify code success (cannot make sure)')
 			return code
 		try_count-=1
+		logging.debug('verify code failed')
 	return -1
 def login(opener):
 	regular=re.compile(r'<input\s*type="hidden"\s*name="(.*?)"\s*value="(.*?)"\s*/?>')
@@ -62,8 +70,10 @@ def login_auto_try(opener):
 	try_count=10
 	while try_count:
 		if login(opener)==0:
+			logging.info('login success')
 			return 0
 		try_count-=1
+		logging.debug('login failed')
 	return -1
 def get_score(opener):
 	reg_tr=re.compile(r'<tr.*?>\s*(.*?)\s*</tr>',re.S)
@@ -74,13 +84,13 @@ def get_score(opener):
 		r=reg_tr.findall(con)
 		for row in r:
 			score_table.append(reg_td.findall(row))
+	return score_table
+def send_mail(score_table):
 	text=''
 	for row in score_table:
 		for item in row:
 			text+=item+'\t'
 		text+='\n'
-	return text
-def send_mail(text):
 	msg=MIMEText(text)
 	msg['Subject']='新的成绩信息'
 	msg['From']='zhantong1994@163.com'
@@ -96,5 +106,7 @@ if __name__=='__main__':
 	cj=http.cookiejar.CookieJar()
 	opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 	login_auto_try(opener)
-	text=get_score(opener)
-	send_mail(text)
+	score_table=get_score(opener)
+	logging.info(score_table)
+#	if len(score_table)!=2:
+#		send_mail(score_table)
