@@ -11,6 +11,7 @@ from email.mime.text import MIMEText
 import smtplib
 import logging
 import platform
+import os
 logging.basicConfig(level=logging.DEBUG,
 					format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
 					datefmt='%a,%d %b %Y %H:%M:%S',
@@ -46,6 +47,7 @@ class Test:
 		cj=http.cookiejar.CookieJar()
 		self.opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 		self.url='http://pyb.nju.edu.cn/'
+		self.file_name='score_info.txt'
 	def get_verify_code(self,url):
 		with self.opener.open(url) as f:
 			imgBuf=BytesIO(f.read())
@@ -113,13 +115,20 @@ class Test:
 		return score_table
 	def get_score(self):
 		score_table=self.get_score_raw()
-		if len(score_table)!=2:
-			text=''
-			for row in score_table:
-				for item in row:
-					text+=item+'\t'
-				text+='\n'
+		text=''
+		for row in score_table:
+			for item in row:
+				text+=item+'\t'
+			text+='\n'
+		if os.path.exists(self.file_name):
+			with open(self.file_name) as f:
+				file_content=f.read()
+		else:
+			file_content=''
+		if text!=file_content:
 			send_mail(text)
+			with open(self.file_name,'w') as f:
+				f.write(text)
 if __name__=='__main__':
 	t=Test()
 	t.login_auto_try()
