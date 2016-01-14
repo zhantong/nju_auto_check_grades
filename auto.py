@@ -10,12 +10,13 @@ import private
 from email.mime.text import MIMEText
 import smtplib
 import logging
+import platform
 logging.basicConfig(level=logging.DEBUG,
 					format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
 					datefmt='%a,%d %b %Y %H:%M:%S',
 					filename='app.log')
 def image_to_string(img):
-	res=subprocess.Popen(['tesseract',img,'stdout','-l eng', '-psm 6'],shell=False,stdout=subprocess.PIPE).communicate()[0]  # 生成同名txt文件
+	res=subprocess.Popen(['tesseract',img,'stdout','-l eng', '-psm 6'],shell=platform.system()=='Windows',stdout=subprocess.PIPE).communicate()[0]  # 生成同名txt文件
 	return res.decode().strip().replace(' ','')
 def deal_with_image(file_path,file_name):
 	threshold=(100,100,100)
